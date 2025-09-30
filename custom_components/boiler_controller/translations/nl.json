@@ -1,0 +1,67 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Boiler Controller Instellen",
+        "description": "Selecteer je vermogenssensor en vul de Shelly apparaatdetails in.",
+        "data": {
+          "name": "Integratie Naam"
+        }
+      },
+      "power_sensor": {
+        "title": "Selecteer Vermogen Sensor",
+        "description": "Kies de sensor die huidige vermogen verbruik/productie gegevens levert (in Watts)",
+        "data": {
+          "p1_total_entity": "Vermogen Sensor"
+        }
+      },
+      "shelly_config": {
+        "title": "Shelly Configureren",
+        "description": "Vul de Shelly RPC basis URL in. Startte je deze flow vanuit een gevonden apparaat? Dan vullen we dit veld alvast voor je in (bijv. http://shelly0110dimg3-xxxx.local of http://shellyplusdimg3-xxxx.local).",
+        "data": {
+          "shelly_url": "Shelly Basis URL"
+        }
+      }
+    },
+    "error": {
+      "no_power_sensors": "Geen vermogen sensoren gevonden in Home Assistant",
+      "entity_not_found": "De geselecteerde entiteit werd niet gevonden",
+      "no_dimmer_entities": "Geen licht of input_number entiteiten gevonden in Home Assistant",
+      "invalid_url": "Geef een geldige http(s) URL op",
+      "cannot_connect": "Kan geen verbinding maken met het Shelly apparaat",
+      "cannot_identify": "Kan het Shelly apparaat ID niet uitlezen",
+      "device_in_use": "Deze Shelly is al geconfigureerd"
+    },
+    "abort": {
+      "already_configured": "Boiler Controller is al geconfigureerd",
+      "unsupported_device": "Het gevonden apparaat wordt niet ondersteund"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Boiler Controller Opties",
+        "description": "Configureer geavanceerde instellingen voor de boiler controller",
+        "data": {
+          "change_devices": "Wijzig vermogenssensor of Shelly instellingen",
+          "min_dimmer_value": "Minimale Dimmer Waarde (%)",
+          "max_dimmer_value": "Maximale Dimmer Waarde (%)"
+        }
+      },
+      "power_sensor": {
+        "title": "Selecteer Nieuwe Stroommeter",
+        "description": "Kies een nieuwe sensor die huidige stroomverbruik/productie data levert (in Watts)",
+        "data": {
+          "p1_total_entity": "Stroommeter"
+        }
+      },
+      "shelly_config": {
+        "title": "Shelly Instellingen Bijwerken",
+        "description": "Pas de Shelly URL aan. Als het apparaat eerder gevonden werd, tonen we hier de huidige waarde.",
+        "data": {
+          "shelly_url": "Shelly Basis URL"
+        }
+      }
+    }
+  }
+}
