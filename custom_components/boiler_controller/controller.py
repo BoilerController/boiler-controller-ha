@@ -14,7 +14,7 @@ from .const import (
     CONF_SHELLY_POLL_INTERVAL,
     DEFAULT_MIN_DIMMER_VALUE,
     DEFAULT_MAX_DIMMER_VALUE,
-    DEFAULT_MIN_UPDATE_INTERVAL,
+    DEFAULT_CALCULATOR_MIN_INTERVAL,
     DEFAULT_SHELLY_POLL_INTERVAL,
     DEFAULT_MANUAL_BRIGHTNESS,
     DIMMER_MODE_AUTO,
@@ -38,6 +38,7 @@ class BoilerController:
         self._poll_task = None
         self._last_update = None
         self._last_power_value = None
+        self._last_calculator_run = None
         self._shelly_status = None
         self._dispatcher_signal = f"{DOMAIN}_{config_entry.entry_id}_shelly_status"
         self._mode_signal = f"{DOMAIN}_{config_entry.entry_id}_dimming_mode"
@@ -65,16 +66,13 @@ class BoilerController:
             config_entry.data.get(CONF_SHELLY_POLL_INTERVAL, DEFAULT_SHELLY_POLL_INTERVAL)
         )
         
-        # Throttling to prevent too frequent updates (configurable, default 2 seconds)
-        self.min_update_interval = DEFAULT_MIN_UPDATE_INTERVAL
-
         self._recompute_effective_dimmer_bounds()
         
         _LOGGER.debug(
-            "Initialized BoilerController: Power Sensor=%s, Shelly URL=%s, min_update_interval=%ds, poll_interval=%ds",
+            "Initialized BoilerController: Power Sensor=%s, Shelly URL=%s, throttle_interval=%ds, poll_interval=%ds",
             self.power_sensor_id,
             self.shelly_url,
-            self.min_update_interval,
+            DEFAULT_CALCULATOR_MIN_INTERVAL,
             self.shelly_poll_interval,
         )
 
@@ -114,6 +112,12 @@ class BoilerController:
     @callback
     async def _async_power_sensor_changed(self, event: Event):
         """Handle power sensor state changes."""
+        now = dt_util.utcnow()
+        if self._last_calculator_run is not None:
+            elapsed = (now - self._last_calculator_run).total_seconds()
+            if elapsed < DEFAULT_CALCULATOR_MIN_INTERVAL:
+                return
+
         new_state = event.data.get("new_state")
         old_state = event.data.get("old_state")
 
@@ -124,11 +128,6 @@ class BoilerController:
                 new_state.state if new_state else "None",
             )
             return
-
-        _LOGGER.info("Power sensor state change event received for %s: old=%s, new=%s",
-                     self.power_sensor_id,
-                     old_state.state if old_state else "None",
-                     new_state.state if new_state else "None")
 
         if not new_state:
             return
@@ -152,13 +151,6 @@ class BoilerController:
         # TODO: Consider making this threshold configurable as the controller needs more than 200 watt to perform well
         if self._last_power_value is not None and abs(new_power_value - self._last_power_value) < 1:
             _LOGGER.debug("Skipping update - power change too small: %.1fW", abs(new_power_value - self._last_power_value))
-            return
-            
-        # Throttle updates to prevent too frequent changes (only after we know we need to update)
-        now = dt_util.utcnow()
-        if self._last_update and (now - self._last_update).total_seconds() < self.min_update_interval:
-            _LOGGER.debug("Throttling update - %.1f seconds since last update (min: %d)", 
-                         (now - self._last_update).total_seconds(), self.min_update_interval)
             return
             
         # Store the new power value
@@ -234,7 +226,9 @@ class BoilerController:
             # Update dimmer
             await self._set_dimmer_percentage(dimmer_percentage, source=DIMMER_MODE_AUTO)
             
-            self._last_update = dt_util.utcnow()
+            timestamp = dt_util.utcnow()
+            self._last_calculator_run = timestamp
+            self._last_update = timestamp
             
         except Exception as err:
             _LOGGER.error("Error during controller update: %s", err)
@@ -343,7 +337,7 @@ class BoilerController:
             "shelly_url": self.shelly_url,
             "shelly_status": self._shelly_status,
             "update_method": "event_driven",
-            "min_update_interval": self.min_update_interval,
+            "calculator_min_interval": DEFAULT_CALCULATOR_MIN_INTERVAL,
             "shelly_poll_interval": self.shelly_poll_interval,
             "min_dimmer": self.min_dimmer_value,
             "max_dimmer": self.max_dimmer_value,
@@ -476,12 +470,18 @@ class BoilerController:
         self._recompute_effective_dimmer_bounds()
 
     def _recompute_effective_dimmer_bounds(self):
-        """Combine user-configured bounds with Shelly hardware limits."""
-        new_min = self.min_dimmer_value
+        """Intersect user preferences with Shelly limits to get the enforceable range.
+
+        The controller never sends a brightness outside this window, so this method
+        re-evaluates the currently valid minimum and maximum whenever either the
+        user-configured bounds or the device-reported constraints change.
+        """
+
+        new_min = self.min_dimmer_value  # Start from the configured preference
         if self._device_min_dimmer_value is not None:
             new_min = max(new_min, self._device_min_dimmer_value)
 
-        new_max = self.max_dimmer_value
+        new_max = self.max_dimmer_value  # Start from the configured preference
         if self._device_max_dimmer_value is not None:
             new_max = min(new_max, self._device_max_dimmer_value)
 

@@ -32,8 +32,8 @@ DEFAULT_MANUAL_BRIGHTNESS = 0
 DIMMER_MODE_AUTO = "auto"
 DIMMER_MODE_MANUAL = "manual"
 DIMMER_MODES = [DIMMER_MODE_AUTO, DIMMER_MODE_MANUAL]
-# Throttle between Shelly brightness updates to avoid spamming the dimmer when the P1 sensor flaps
-DEFAULT_MIN_UPDATE_INTERVAL = 2
+# Minimum spacing between calculator-driven dimmer updates
+DEFAULT_CALCULATOR_MIN_INTERVAL = 15
 # Seconds between Shelly status polls
 # Where it updates all the sensor values
 DEFAULT_SHELLY_POLL_INTERVAL = 15

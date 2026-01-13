@@ -132,10 +132,10 @@ class BoilerControllerStatusSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
+        # Surface diagnostics/details without overloading the main sensor state
         attrs: Dict[str, Any] = {
             "power_sensor": self.controller.power_sensor_id,
             "shelly_url": self.controller.shelly_url,
-            "min_update_interval": f"{self.controller.min_update_interval}s",
             "shelly_poll_interval": f"{self.controller.shelly_poll_interval}s",
             "integration_version": _integration_version(self.controller, self.config_entry),
         }
@@ -247,6 +247,7 @@ class PowerSensorStatusSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
+        # Report availability metadata that helps diagnose the underlying power entity
         state = self.hass.states.get(self.controller.power_sensor_id)
         if not state:
             return {"status": "missing"}
@@ -337,8 +338,8 @@ class LastUpdateSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
+        # Keep transport/update metadata in attributes so the sensor value remains a timestamp
         attrs = {
-            "min_update_interval": f"{self.controller.min_update_interval}s",
             "update_method": "event_driven",
             "integration_version": _integration_version(self.controller, self.config_entry),
         }
