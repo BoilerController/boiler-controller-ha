@@ -22,7 +22,7 @@ from .const import (
     DIMMER_MODES,
 )
 from .shelly_client import ShellyClient
-from .dimmer_calculator import DimmerCalculator
+from .calculator import Calculator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class BoilerController:
         self.shelly_url = config_entry.data[CONF_SHELLY_URL]
         self.power_sensor_id = config_entry.data[CONF_P1_TOTAL_ENTITY]
         self.shelly_client = ShellyClient(hass, self.shelly_url)
-        self._dimmer_calculator = DimmerCalculator()
+        self._calculator = Calculator()
         stored_mode = config_entry.options.get("dimming_mode", DIMMER_MODE_MANUAL)
         self._dimming_mode = stored_mode if stored_mode in DIMMER_MODES else DIMMER_MODE_MANUAL
         stored_manual = config_entry.options.get("manual_brightness", DEFAULT_MANUAL_BRIGHTNESS)
@@ -224,7 +224,7 @@ class BoilerController:
                 return
             
             # Calculate dimmer percentage based on power value
-            dimmer_percentage = self._dimmer_calculator.calculate(
+            dimmer_percentage = self._calculator.calculate(
                 power_value,
                 self._effective_min_dimmer_value,
                 self._effective_max_dimmer_value,

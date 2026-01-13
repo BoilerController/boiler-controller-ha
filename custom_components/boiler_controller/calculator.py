@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 
 @dataclass(slots=True)
-class DimmerCalculator:
+class Calculator:
     """Encapsulate the dimmer percentage calculation logic."""
 
     max_power_watts: float = 3000.0
