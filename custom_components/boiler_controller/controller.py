@@ -36,7 +36,7 @@ class BoilerController:
         self.integration_version = integration_version
         self._cancel_listener = None
         self._poll_task = None
-        self._last_update = None
+        self._last_dimmer_update = None
         self._last_power_value = None
         self._last_calculator_run = None
         self._shelly_status = None
@@ -228,7 +228,7 @@ class BoilerController:
             
             timestamp = dt_util.utcnow()
             self._last_calculator_run = timestamp
-            self._last_update = timestamp
+            self._last_dimmer_update = timestamp
             
         except Exception as err:
             _LOGGER.error("Error during controller update: %s", err)
@@ -278,6 +278,17 @@ class BoilerController:
             except Exception as err:  # pylint: disable=broad-except
                 _LOGGER.error("Unexpected Shelly polling error: %s", err)
                 await asyncio.sleep(self.shelly_poll_interval)
+
+    async def _async_refresh_shelly_status(self):
+        """Force a Shelly status refresh outside the poll loop."""
+        try:
+            status = await self.shelly_client.async_get_status()
+            if status is None:
+                return
+            self._shelly_status = status
+            async_dispatcher_send(self.hass, self._dispatcher_signal, status)
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.debug("Manual Shelly status refresh failed: %s", err)
 
     async def _set_dimmer_percentage(self, percentage: int, *, source: str = DIMMER_MODE_AUTO):
         """Set the dimmer to the specified percentage using Shelly API."""
@@ -331,7 +342,7 @@ class BoilerController:
     def get_status(self):
         """Get current controller status."""
         return {
-            "last_update": self._last_update,
+            "last_dimmer_update": self._last_dimmer_update,
             "last_power_value": self._last_power_value,
             "power_sensor": self.power_sensor_id,
             "shelly_url": self.shelly_url,
@@ -405,7 +416,8 @@ class BoilerController:
         """Apply the stored manual brightness to the Shelly device."""
         _LOGGER.debug("Applying manual brightness override: %s%%", self._manual_brightness)
         await self._set_dimmer_percentage(self._manual_brightness, source=DIMMER_MODE_MANUAL)
-        self._last_update = dt_util.utcnow()
+        self._last_dimmer_update = dt_util.utcnow()
+        await self._async_refresh_shelly_status()
 
     async def _ensure_device_identity(self) -> None:
         """Persist the Shelly device identifier on the config entry when missing."""

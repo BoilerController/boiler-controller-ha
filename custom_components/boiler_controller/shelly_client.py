@@ -51,7 +51,8 @@ class ShellyClient:
 
     def _channel_params(self) -> Dict[str, int]:
         """Return RPC params targeting the configured light channel."""
-        return {"id": self._light_id}
+        channel_id = 0 if self._light_id is None else int(self._light_id)
+        return {"id": channel_id}
 
     async def async_get_status(self) -> Optional[Dict[str, Any]]:
         """Fetch current status from the Shelly device."""
@@ -73,13 +74,23 @@ class ShellyClient:
             _LOGGER.error("Unexpected Shelly status error: %s", err)
         return None
 
-    async def _async_light_set(self, params: Dict[str, Any]) -> bool:
-        """Call the Shelly Light.Set RPC method via POST."""
+    async def _async_light_set(self, payload: Dict[str, Any]) -> bool:
+        """Call the Shelly Light.Set RPC method via GET with query params."""
         url = f"{self.base_url}{SHELLY_RPC_LIGHT_SET}"
+        request_params = dict(self._channel_params())
+        request_params.update(payload)
+
+        safe_params: Dict[str, Any] = {}
+        for key, value in request_params.items():
+            safe_params[key] = int(value) if isinstance(value, bool) else value
+
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug("Shelly Light.Set params=%s", safe_params)
+
         try:
-            async with self._session.post(
+            async with self._session.get(
                 url,
-                json=params,
+                params=safe_params,
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
                 if response.status == 200:
@@ -99,16 +110,15 @@ class ShellyClient:
     async def async_set_brightness(self, brightness: int) -> bool:
         """Set dimmer brightness (0-100)."""
         clamped = max(0, min(100, int(brightness)))
-        params = self._channel_params()
-        params["brightness"] = clamped
-        params["on"] = bool(clamped)
-        return await self._async_light_set(params)
+        payload = {
+            "brightness": clamped,
+            "on": bool(clamped),
+        }
+        return await self._async_light_set(payload)
 
     async def async_turn_off(self) -> bool:
         """Turn off the Shelly dimmer."""
-        params = self._channel_params()
-        params["on"] = False
-        return await self._async_light_set(params)
+        return await self._async_light_set({"on": False})
 
     async def async_test_connection(self) -> bool:
         """Check whether the Shelly is reachable."""

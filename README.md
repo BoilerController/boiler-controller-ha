@@ -39,6 +39,17 @@ For ad-hoc control you also get two helper entities once the integration is set 
 
 Switching back to `auto` immediately returns control to the P1-driven logic.
 
+## Diagnostics & Telemetry
+
+The integration exposes multiple diagnostic sensors in Home Assistant. Besides the Shelly telemetry (voltage, current, power, temperature, energy), you will also see **{Integration Name} Last Dimmer Update**. This timestamp sensor records the last moment the controller actually adjusted the Shelly brightness, whether triggered automatically by the calculator or manually via the override entities. It is not tied to general sensor updates, so its value only changes after a dim command is sent to the Shelly.
+
+| Entity | Type | Description |
+| --- | --- | --- |
+| **{Integration Name} Status** | Sensor (text) | Shows `Running` when the Shelly dimmer output is ON, `Idle` when it is OFF, and `Error` if Shelly reports an error. Attributes include dimmer bounds, current Shelly metrics, and whether manual mode is active. |
+| **{Integration Name} Power Sensor** | Sensor (number, W) | Mirrors the configured P1 entity so you can quickly confirm the source data the controller uses. |
+| **{Integration Name} Last Dimmer Update** | Sensor (timestamp) | Timestamp of the last successful Shelly brightness command, regardless of whether it was auto or manual. |
+| **{Integration Name} Shelly Brightness / Voltage / Current / Power / Temperature / Energy** | Sensors | Live telemetry polled from the Shelly device. These sensors update whenever the controller’s Shelly poll loop publishes new data. |
+
 ## Logic
 
 The default logic:

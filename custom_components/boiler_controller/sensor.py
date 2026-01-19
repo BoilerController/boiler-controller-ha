@@ -70,7 +70,7 @@ async def async_setup_entry(
     sensors: List[SensorEntity] = [
         BoilerControllerStatusSensor(hass, config_entry, controller),
         PowerSensorStatusSensor(hass, config_entry, controller),
-        LastUpdateSensor(hass, config_entry, controller),
+        LastDimmerUpdateSensor(hass, config_entry, controller),
         ShellyBrightnessSensor(hass, config_entry, controller),
         ShellyVoltageSensor(hass, config_entry, controller),
         ShellyCurrentSensor(hass, config_entry, controller),
@@ -128,7 +128,12 @@ class BoilerControllerStatusSensor(SensorEntity):
 
     @property
     def state(self) -> str:
-        return "Active" if self.controller._last_update else "Waiting"
+        status = self.controller.get_shelly_status() or {}
+        if status.get("errors"):
+            return "Error"
+        if status.get("output"):
+            return "Running"
+        return "Idle"
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
@@ -149,6 +154,8 @@ class BoilerControllerStatusSensor(SensorEntity):
                 "device_max_dimmer": controller_status.get("device_max_dimmer"),
                 "effective_min_dimmer": controller_status.get("effective_min_dimmer"),
                 "effective_max_dimmer": controller_status.get("effective_max_dimmer"),
+                "last_dimmer_update": controller_status.get("last_dimmer_update"),
+                "manual_mode": controller_status.get("dimming_mode") == "manual",
             }
         )
 
@@ -187,8 +194,8 @@ class BoilerControllerStatusSensor(SensorEntity):
         else:
             attrs["shelly_status"] = "unavailable"
 
-        if self.controller._last_update:
-            attrs["last_update"] = self.controller._last_update.isoformat()
+        if self.controller._last_dimmer_update:
+            attrs["last_dimmer_update"] = self.controller._last_dimmer_update.isoformat()
         if self.controller._last_power_value is not None:
             attrs["last_power_value"] = self.controller._last_power_value
 
@@ -282,8 +289,8 @@ class PowerSensorStatusSensor(SensorEntity):
         return _device_info(self.config_entry, self.controller)
 
 
-class LastUpdateSensor(SensorEntity):
-    """Sensor showing when the controller last updated Shelly."""
+class LastDimmerUpdateSensor(SensorEntity):
+    """Sensor showing when the controller last adjusted the Shelly dimmer."""
 
     _attr_should_poll = False
     _attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -292,8 +299,8 @@ class LastUpdateSensor(SensorEntity):
         self.hass = hass
         self.config_entry = config_entry
         self.controller = controller
-        self._attr_name = f"{config_entry.title} Last Update"
-        self._attr_unique_id = f"{config_entry.entry_id}_last_update"
+        self._attr_name = f"{config_entry.title} Last Dimmer Update"
+        self._attr_unique_id = f"{config_entry.entry_id}_last_dimmer_update"
         self._attr_icon = "mdi:clock-outline"
         self._remove_callbacks: List[Callable] = []
 
@@ -329,7 +336,7 @@ class LastUpdateSensor(SensorEntity):
 
     @property
     def native_value(self):
-        value = self.controller._last_update
+        value = self.controller._last_dimmer_update
         if isinstance(value, str):
             parsed = dt_util.parse_datetime(value)
             if parsed is not None:
