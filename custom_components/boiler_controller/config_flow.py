@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlparse
 
 import aiohttp
 import voluptuous as vol
@@ -87,12 +88,42 @@ class ShellyValidationMixin:
         payload = await client.async_get_device_info()
         if not payload:
             _LOGGER.warning("Shelly identity request failed for %s", url)
-            return None
+            return self._derive_device_id_from_url(url)
 
         device_id = ShellyClient.extract_device_id(payload)
-        if not device_id:
-            _LOGGER.warning("Unable to extract Shelly ID from payload: %s", payload)
-        return device_id
+        if device_id:
+            return device_id
+
+        fallback_device_id = self._derive_device_id_from_url(url)
+        if fallback_device_id:
+            _LOGGER.debug(
+                "Using %s as fallback Shelly ID for %s", fallback_device_id, url
+            )
+            return fallback_device_id
+
+        _LOGGER.warning("Unable to extract Shelly ID from payload: %s", payload)
+        return None
+
+    @staticmethod
+    def _derive_device_id_from_url(url: str) -> str | None:
+        """Fallback to a stable identifier derived from the URL host/port."""
+        if not url:
+            return None
+
+        try:
+            parsed = urlparse(url)
+        except ValueError:
+            return None
+
+        host = parsed.hostname
+        if not host:
+            return None
+
+        host = host.strip().lower().replace(":", "-")
+        if parsed.port:
+            host = f"{host}-{parsed.port}"
+
+        return host or None
 
 
 class BoilerControllerConfigFlow(ShellyValidationMixin, config_entries.ConfigFlow, domain=DOMAIN):
