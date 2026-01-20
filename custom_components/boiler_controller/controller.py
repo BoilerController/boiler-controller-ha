@@ -307,25 +307,26 @@ class BoilerController:
                     _LOGGER.warning("Failed to turn off Shelly dimmer")
                 _LOGGER.info("Shelly dimmer turn_off success=%s", success)
             else:
+                desired_percentage = max(1, percentage)
                 if source == DIMMER_MODE_MANUAL:
                     _LOGGER.info(
                         "Shelly dimmer request (%s): set to %s%%",
                         context,
-                        percentage,
+                        desired_percentage,
                     )
                 else:
                     _LOGGER.info(
                         "Shelly dimmer request (%s): set to %s%% (effective range %s-%s%%)",
                         context,
-                        percentage,
+                        desired_percentage,
                         self._effective_min_dimmer_value,
                         self._effective_max_dimmer_value,
                     )
-                success = await self.shelly_client.async_set_brightness(percentage)
+                success = await self.shelly_client.async_set_brightness(desired_percentage)
                 if success:
-                    _LOGGER.debug("Shelly dimmer set to %s%%", percentage)
+                    _LOGGER.debug("Shelly dimmer set to %s%%", desired_percentage)
                 else:
-                    _LOGGER.warning("Failed to set Shelly dimmer to %s%%", percentage)
+                    _LOGGER.warning("Failed to set Shelly dimmer to %s%%", desired_percentage)
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.error("Error setting Shelly dimmer percentage: %s", err)
 
