@@ -220,6 +220,7 @@ class BoilerController:
                 power_value,
                 self._effective_min_dimmer_value,
                 self._effective_max_dimmer_value,
+                boiler_consumption=self._extract_boiler_consumption(),
             )
             _LOGGER.debug("Calculated dimmer percentage: %s%%", dimmer_percentage)
             
@@ -418,6 +419,17 @@ class BoilerController:
         await self._set_dimmer_percentage(self._manual_brightness, source=DIMMER_MODE_MANUAL)
         self._last_dimmer_update = dt_util.utcnow()
         await self._async_refresh_shelly_status()
+
+    def _extract_boiler_consumption(self) -> float:
+        """Return the latest Shelly-reported consumption in watts."""
+        status = self._shelly_status or {}
+        if not status:
+            return 0.0
+        value = status.get("apower", status.get("power"))
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
 
     async def _ensure_device_identity(self) -> None:
         """Persist the Shelly device identifier on the config entry when missing."""
