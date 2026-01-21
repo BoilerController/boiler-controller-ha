@@ -41,11 +41,9 @@
     "step": {
       "init": {
         "title": "Boiler Controller Opties",
-        "description": "Configureer geavanceerde instellingen voor de boiler controller",
+        "description": "Wijzig de vermogenssensor of Shelly die deze controller gebruikt",
         "data": {
-          "change_devices": "Wijzig vermogenssensor of Shelly instellingen",
-          "min_dimmer_value": "Minimale Dimmer Waarde (%)",
-          "max_dimmer_value": "Maximale Dimmer Waarde (%)"
+          "change_devices": "Wijzig vermogenssensor of Shelly instellingen"
         }
       },
       "power_sensor": {

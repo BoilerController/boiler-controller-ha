@@ -1,9 +1,12 @@
 """Select entities for the Boiler Controller integration."""
 from __future__ import annotations
 
+from typing import List, Callable
+
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -34,27 +37,47 @@ class BoilerControllerModeSelect(SelectEntity):
         self._attr_name = f"{config_entry.title} Dimmer Mode"
         self._attr_unique_id = f"{config_entry.entry_id}_dimmer_mode"
         self._attr_current_option = controller.dimming_mode
-        self._remove_dispatcher = None
+        self._remove_callbacks: List[Callable[[], None]] = []
 
     async def async_added_to_hass(self) -> None:
-        self._remove_dispatcher = async_dispatcher_connect(
-            self.hass,
-            self.controller.get_dimming_mode_signal(),
-            self._handle_mode_update,
+        self._remove_callbacks.append(
+            async_dispatcher_connect(
+                self.hass,
+                self.controller.get_dimming_mode_signal(),
+                self._handle_mode_update,
+            )
         )
+        self._remove_callbacks.append(
+            async_dispatcher_connect(
+                self.hass,
+                self.controller.get_calibration_state_signal(),
+                self._handle_calibration_state,
+            )
+        )
+        self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
-        if self._remove_dispatcher:
-            self._remove_dispatcher()
-            self._remove_dispatcher = None
+        for remove in self._remove_callbacks:
+            remove()
+        self._remove_callbacks.clear()
 
     @callback
     def _handle_mode_update(self, mode: str) -> None:
         self._attr_current_option = mode
         self.async_write_ha_state()
 
+    @callback
+    def _handle_calibration_state(self, *_: object) -> None:
+        self.async_write_ha_state()
+
     async def async_select_option(self, option: str) -> None:
+        if self.controller.is_calibration_active:
+            raise HomeAssistantError("Cannot change mode while calibration is running")
         await self.controller.async_set_dimming_mode(option)
+
+    @property
+    def available(self) -> bool:
+        return super().available and not self.controller.is_calibration_active
 
     @property
     def device_info(self):

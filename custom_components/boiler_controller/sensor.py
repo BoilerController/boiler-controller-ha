@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.util import dt as dt_util
 
 try:
@@ -128,6 +129,8 @@ class BoilerControllerStatusSensor(SensorEntity):
 
     @property
     def state(self) -> str:
+        if self.controller.is_calibration_active:
+            return "Calibration"
         status = self.controller.get_shelly_status() or {}
         if status.get("errors"):
             return "Error"
@@ -156,6 +159,9 @@ class BoilerControllerStatusSensor(SensorEntity):
                 "effective_max_dimmer": controller_status.get("effective_max_dimmer"),
                 "last_dimmer_update": controller_status.get("last_dimmer_update"),
                 "manual_mode": controller_status.get("dimming_mode") == "manual",
+                "calibration_active": controller_status.get("calibration_active", False),
+                "calibration_points": controller_status.get("calibration_points", 0),
+                "calibration_created": controller_status.get("calibration_created"),
             }
         )
 
@@ -212,6 +218,7 @@ class PowerSensorStatusSensor(SensorEntity):
     _attr_should_poll = False
     _attr_device_class = SensorDeviceClass.POWER
     _attr_native_unit_of_measurement = "W"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry, controller) -> None:
         self.hass = hass
@@ -294,6 +301,7 @@ class LastDimmerUpdateSensor(SensorEntity):
 
     _attr_should_poll = False
     _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry, controller) -> None:
         self.hass = hass
@@ -363,6 +371,7 @@ class ShellySensorBase(SensorEntity):
     """Base class for Shelly telemetry sensors fed by the controller polling loop."""
 
     _attr_should_poll = False
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
         self,

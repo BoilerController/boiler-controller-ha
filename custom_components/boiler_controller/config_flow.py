@@ -318,16 +318,12 @@ class BoilerControllerOptionsFlow(ShellyValidationMixin, config_entries.OptionsF
         if user_input is not None:
             if user_input.get("change_devices"):
                 return await self.async_step_power_sensor()
-            else:
-                # Only update the advanced settings
-                return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(title="", data={})
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
                 vol.Optional("change_devices", default=False): bool,
-                vol.Optional("min_dimmer_value", default=self._config_entry.options.get("min_dimmer_value", 0)): int,
-                vol.Optional("max_dimmer_value", default=self._config_entry.options.get("max_dimmer_value", 100)): int,
             })
         )
 

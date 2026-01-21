@@ -1,9 +1,12 @@
 """Number entities for controlling manual brightness."""
 from __future__ import annotations
 
+from typing import Callable, List
+
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -37,19 +40,29 @@ class BoilerControllerManualBrightnessNumber(NumberEntity):
         self._attr_name = f"{config_entry.title} Manual Brightness"
         self._attr_unique_id = f"{config_entry.entry_id}_manual_brightness"
         self._attr_native_value = controller.manual_brightness
-        self._remove_dispatcher = None
+        self._remove_callbacks: List[Callable[[], None]] = []
 
     async def async_added_to_hass(self) -> None:
-        self._remove_dispatcher = async_dispatcher_connect(
-            self.hass,
-            self.controller.get_manual_brightness_signal(),
-            self._handle_manual_brightness_update,
+        self._remove_callbacks.append(
+            async_dispatcher_connect(
+                self.hass,
+                self.controller.get_manual_brightness_signal(),
+                self._handle_manual_brightness_update,
+            )
         )
+        self._remove_callbacks.append(
+            async_dispatcher_connect(
+                self.hass,
+                self.controller.get_calibration_state_signal(),
+                self._handle_calibration_state,
+            )
+        )
+        self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
-        if self._remove_dispatcher:
-            self._remove_dispatcher()
-            self._remove_dispatcher = None
+        for remove in self._remove_callbacks:
+            remove()
+        self._remove_callbacks.clear()
 
     @callback
     def _handle_manual_brightness_update(self, value: int) -> None:
@@ -57,7 +70,17 @@ class BoilerControllerManualBrightnessNumber(NumberEntity):
         self.async_write_ha_state()
 
     async def async_set_native_value(self, value: float) -> None:
+        if self.controller.is_calibration_active:
+            raise HomeAssistantError("Cannot change manual brightness during calibration")
         await self.controller.async_set_manual_brightness(int(value))
+
+    @callback
+    def _handle_calibration_state(self, *_: object) -> None:
+        self.async_write_ha_state()
+
+    @property
+    def available(self) -> bool:
+        return super().available and not self.controller.is_calibration_active
 
     @property
     def device_info(self):

@@ -12,6 +12,7 @@ class Calculator:
     """Encapsulate the dimmer percentage calculation logic."""
 
     max_power_watts: float = 3000.0
+    thresholds: list[tuple[float, int]] | None = None
 
     # (export_watt, percentage) -- export_watt uses absolute values for readability.
     COARSE_THRESHOLDS = [
@@ -26,6 +27,10 @@ class Calculator:
         (1800, 90),
         (2200, 100),
     ]
+
+    def __post_init__(self):
+        if not self.thresholds:
+            self.thresholds = list(self.COARSE_THRESHOLDS)
 
     def calculate(
         self,
@@ -46,6 +51,8 @@ class Calculator:
         if export_watts == 0:
             return 0
 
+        thresholds = self.thresholds or self.COARSE_THRESHOLDS
+
         # Track the upper bound of the coarse segment we'll fall into.
         base_percentage = 100
         # Keep the lower watt boundary of the current segment.
@@ -53,7 +60,8 @@ class Calculator:
         # Keep the lower percentage boundary so we can interpolate.
         lower_percentage = 0
 
-        for limit, percentage in self.COARSE_THRESHOLDS:
+        # Find the coarse segment we fall into.
+        for limit, percentage in thresholds:
             if export_watts <= limit:
                 base_percentage = percentage
                 break
@@ -61,8 +69,8 @@ class Calculator:
             lower_limit = limit
             lower_percentage = percentage
 
-        # if we exceed the highest threshold, return max dimmer. 
-        if export_watts > self.COARSE_THRESHOLDS[-1][0]:
+        # if we exceed the highest threshold, return max dimmer.
+        if export_watts > thresholds[-1][0]:
             return 100
 
         # Width of the current watt interval (avoid divide by zero).
@@ -74,3 +82,22 @@ class Calculator:
 
         fine_percentage = lower_percentage + (remaining_watts / span_watts) * span_percentage
         return max(min_dimmer, min(max_dimmer, round(fine_percentage)))
+
+    def set_thresholds(self, thresholds: list[tuple[float, int]] | None) -> None:
+        """Install a new watt-to-percentage table for future calculations."""
+
+        if not thresholds:
+            self.thresholds = list(self.COARSE_THRESHOLDS)
+            return
+
+        sanitized: list[tuple[float, int]] = []
+        for watts, percentage in thresholds:
+            try:
+                clean_watts = max(0.0, float(watts))
+                clean_percentage = max(0, min(100, int(percentage)))
+            except (TypeError, ValueError):
+                continue
+            sanitized.append((clean_watts, clean_percentage))
+
+        sanitized.sort(key=lambda item: item[0])
+        self.thresholds = sanitized or list(self.COARSE_THRESHOLDS)

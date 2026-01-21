@@ -41,11 +41,9 @@
     "step": {
       "init": {
         "title": "Boiler Controller Options",
-        "description": "Configure advanced settings for the boiler controller",
+        "description": "Switch the power sensor or Shelly device used by this controller",
         "data": {
-          "change_devices": "Change power sensor or Shelly settings",
-          "min_dimmer_value": "Minimum Dimmer Value (%)",
-          "max_dimmer_value": "Maximum Dimmer Value (%)"
+          "change_devices": "Change power sensor or Shelly settings"
         }
       },
       "power_sensor": {

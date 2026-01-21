@@ -1,7 +1,7 @@
 DOMAIN = "boiler_controller"
 VERSION = "0.1.0"
 
-PLATFORMS = ["sensor", "select", "number"]
+PLATFORMS = ["sensor", "select", "number", "button"]
 
 # Configuration flow step IDs
 STEP_POWER_SENSOR = "power_sensor"
@@ -37,3 +37,13 @@ DEFAULT_CALCULATOR_MIN_INTERVAL = 15
 # Seconds between Shelly status polls
 # Where it updates all the sensor values
 DEFAULT_SHELLY_POLL_INTERVAL = 15
+
+# Calibration service/options
+SERVICE_RUN_CALIBRATION = "run_calibration"
+SERVICE_CANCEL_CALIBRATION = "cancel_calibration"
+ATTR_CONFIG_ENTRY_ID = "config_entry_id"
+CALIBRATION_START_PERCENTAGE = 20
+CALIBRATION_END_PERCENTAGE = 100
+CALIBRATION_STEP_PERCENTAGE = 1
+CALIBRATION_SETTLE_SECONDS = 3
+CALIBRATION_STORAGE_VERSION = 1
