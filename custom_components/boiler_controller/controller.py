@@ -42,6 +42,7 @@ class BoilerController:
         self._last_power_value = None
         self._last_calculator_run = None
         self._shelly_status = None
+        self._current_dimmer_percentage: int | None = None
         self._dispatcher_signal = f"{DOMAIN}_{config_entry.entry_id}_shelly_status"
         self._mode_signal = f"{DOMAIN}_{config_entry.entry_id}_dimming_mode"
         self._manual_brightness_signal = f"{DOMAIN}_{config_entry.entry_id}_manual_brightness"
@@ -241,9 +242,9 @@ class BoilerController:
                 self._effective_min_dimmer_value,
                 self._effective_max_dimmer_value,
                 boiler_consumption=self._extract_boiler_consumption(),
+                current_dimmer=self._extract_boiler_brightness(),
             )
-            _LOGGER.debug("Calculated dimmer percentage: %s%%", dimmer_percentage)
-            
+
             # Update dimmer
             await self._set_dimmer_percentage(dimmer_percentage, source=DIMMER_MODE_AUTO)
             
@@ -292,6 +293,7 @@ class BoilerController:
                     status = await self.shelly_client.async_get_status()
                     if status is not None:
                         self._shelly_status = status
+                        self._update_cached_brightness(status)
                         async_dispatcher_send(self.hass, self._dispatcher_signal, status)
                 await asyncio.sleep(self.shelly_poll_interval)
             except asyncio.CancelledError:
@@ -308,6 +310,7 @@ class BoilerController:
             if status is None:
                 return
             self._shelly_status = status
+            self._update_cached_brightness(status)
             async_dispatcher_send(self.hass, self._dispatcher_signal, status)
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.debug("Manual Shelly status refresh failed: %s", err)
@@ -327,6 +330,7 @@ class BoilerController:
                 if not set_success:
                     _LOGGER.warning("Failed to set Shelly dimmer to 0%% before turn off")
                 success = await self.shelly_client.async_turn_off()
+                self._current_dimmer_percentage = 0
                 if success:
                     _LOGGER.debug("Shelly dimmer turned off")
                 else:
@@ -349,6 +353,7 @@ class BoilerController:
                         self._effective_max_dimmer_value,
                     )
                 success = await self.shelly_client.async_set_brightness(desired_percentage)
+                self._current_dimmer_percentage = desired_percentage
                 if success:
                     _LOGGER.debug("Shelly dimmer set to %s%%", desired_percentage)
                 else:
@@ -576,6 +581,27 @@ class BoilerController:
         except (TypeError, ValueError):
             return 0.0
 
+    def _update_cached_brightness(self, status: dict | None) -> None:
+        """Cache the brightness reported by the Shelly status payload."""
+
+        if not status:
+            return
+        brightness = status.get("brightness", status.get("gain"))
+        if brightness is None:
+            return
+        try:
+            parsed = max(0, min(100, int(brightness)))
+        except (TypeError, ValueError):
+            return
+        self._current_dimmer_percentage = parsed
+
+    def _extract_boiler_brightness(self) -> int | None:
+        """Return the latest known dimmer percentage for the boiler."""
+
+        if self._shelly_status:
+            self._update_cached_brightness(self._shelly_status)
+        return self._current_dimmer_percentage
+
     async def _async_measure_boiler_power(self) -> float:
         """Force a Shelly status fetch and return the current power draw."""
         status = await self.shelly_client.async_get_status()
@@ -583,6 +609,7 @@ class BoilerController:
             return 0.0
 
         self._shelly_status = status
+        self._update_cached_brightness(status)
         async_dispatcher_send(self.hass, self._dispatcher_signal, status)
 
         value = status.get("apower", status.get("power"))
@@ -783,7 +810,7 @@ class BoilerController:
         self._calibration_profile = profile
         points = profile.get("points", []) if profile else []
         thresholds = points_to_thresholds(points)
-        self._calculator.set_thresholds(thresholds if thresholds else None)
+        self._calculator.set_calibration_profile(thresholds if thresholds else None)
 
     @staticmethod
     def _get_state_unit(state) -> str:
