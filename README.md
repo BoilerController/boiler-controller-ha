@@ -1,6 +1,6 @@
 # Boiler Controller HA Integration
 
-A Home Assistant integration for automatically controlling a Shelly Dimmer 0/1-10V PM Gen3 based on P1 smart meter data.
+Boiler Controller turns your electric boiler into a water battery. Instead of exporting surplus energy, it dumps the excess reported by your P1 meter straight into the heater so you store free solar/dynamic energy as hot water.
 
 ## Features
 
@@ -26,16 +26,27 @@ This integration:
 
 The integration requires:
 - A working P1 smart meter integration in Home Assistant
-- A Shelly Dimmer 0/1-10V PM Gen3 device connected to Home Assistant
+- A Boiler Controller device configured with the P1 power sensor and Shelly Dimmer
+
+### Calibration (do this before use)
+
+Every dimmer behaves slightly differently and the Shelly power stage reacts differently as it warms up. Run the calibration sweep once before you start relying on the automation so the controller knows how many watts belong to each brightness step.
+
+1. Open the Boiler Controller device page in Home Assistant and press the calibration button (or, if you prefer Services, call `boiler_controller.run_calibration` for your config entry).
+2. Let the sweep run from 20% (*) to 100%. The controller will record the wattage for every 1% step and store it as the active profile.
+3. If you change hardware or notice large seasonal deviations, rerun the calibration—this profile is the backbone of the calculator (*).
+
+If no calibration exists, the integration falls back to the built-in profile listed in `calculator.py`, but the results are always better with a fresh measurement from your own installation.
+
+\* The power regulator behaves erratically below 20%.
+\* A future release will redo the calibration automatically based on detected performance drift.
 
 ## Advanced Settings & Manual Override
-
-Via the integration options you can adjust the minimum and maximum dimmer bounds that the automatic logic uses.
 
 For ad-hoc control you also get two helper entities once the integration is set up:
 
 - `Select` – **{Integration Name} Dimmer Mode**: choose `auto` to let the controller react to power usage, or `manual` to override the Shelly brightness yourself.
-- `Number` – **{Integration Name} Manual Brightness**: specify the brightness percentage (0–100). This value is only applied when the mode select is in `manual`.
+- `Number` – **{Integration Name} Manual Brightness**: specify the brightness percentage (20–100). This value is only applied when the mode select is in `manual`.
 
 Switching back to `auto` immediately returns control to the P1-driven logic.
 
@@ -52,9 +63,11 @@ The integration exposes multiple diagnostic sensors in Home Assistant. Besides t
 
 ## Logic
 
-The default logic:
-- At 0W consumption: dimmer at minimum
-- At 3000W+ consumption: dimmer at maximum
-- In between: linearly scaled between min and max
+The controller always works from the calibration profile (either your recorded one or the bundled default curve):
 
-This logic can be customized in the `controller.py` file.
+1. **Baseline lookup** – take the current Shelly brightness and read the expected wattage from the profile. If that entry is missing (e.g. Shelly just woke up), fall back to the live Shelly reading.
+2. **Add the grid delta** – combine the baseline with the current P1 surplus/deficit (negative grid flow means import). This becomes the target wattage we would like the boiler to draw.
+3. **Find the best matching point** – search the calibration profile for the lowest percentage whose wattage can deliver the target value (respecting the hard cap of 2.2 kW, `MAX_EXPORT_WATTS`).
+4. **Clamp to allowed range** – enforce the configured min/max dimmer bounds and send that final percentage to the Shelly.
+
+Because the profile already captures how your dimmer responds at each step, this approach automatically compensates for situations where warm hardware performs better than cold hardware.
