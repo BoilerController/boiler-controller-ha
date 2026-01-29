@@ -10,7 +10,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, MIN_MANUAL_BRIGHTNESS
 
 
 async def async_setup_entry(
@@ -27,7 +27,7 @@ class BoilerControllerManualBrightnessNumber(NumberEntity):
     """Number entity exposing manual brightness override."""
 
     _attr_should_poll = False
-    _attr_native_min_value = 0
+    _attr_native_min_value = MIN_MANUAL_BRIGHTNESS
     _attr_native_max_value = 100
     _attr_native_step = 1
     _attr_mode = NumberMode.BOX

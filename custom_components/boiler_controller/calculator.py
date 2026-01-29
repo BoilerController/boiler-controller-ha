@@ -103,6 +103,8 @@ DEFAULT_THRESHOLD_TABLE: list[tuple[float, int]] = [(0.0, 0)] + sorted(
     key=lambda item: item[0],
 )
 
+# TODO - we should automate changes of this profile over time based on observed performance drift.
+
 @dataclass(slots=True)
 class Calculator:
     """Encapsulate the dimmer percentage calculation logic."""

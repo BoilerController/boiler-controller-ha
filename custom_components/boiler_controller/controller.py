@@ -17,6 +17,7 @@ from .const import (
     DEFAULT_CALCULATOR_MIN_INTERVAL,
     DEFAULT_SHELLY_POLL_INTERVAL,
     DEFAULT_MANUAL_BRIGHTNESS,
+    MIN_MANUAL_BRIGHTNESS,
     DIMMER_MODE_AUTO,
     DIMMER_MODE_MANUAL,
     DIMMER_MODES,
@@ -56,7 +57,7 @@ class BoilerController:
         stored_mode = config_entry.options.get("dimming_mode", DIMMER_MODE_MANUAL)
         self._dimming_mode = stored_mode if stored_mode in DIMMER_MODES else DIMMER_MODE_MANUAL
         stored_manual = config_entry.options.get("manual_brightness", DEFAULT_MANUAL_BRIGHTNESS)
-        self._manual_brightness = max(0, min(100, int(stored_manual)))
+        self._manual_brightness = max(MIN_MANUAL_BRIGHTNESS, min(100, int(stored_manual)))
         self._calibration_store = CalibrationStore(hass, config_entry.entry_id)
         self._calibration_profile: dict | None = None
         self._calibration_lock = asyncio.Lock()
@@ -467,7 +468,7 @@ class BoilerController:
         """Store manual brightness and apply when manual mode is active."""
         if self._calibration_active:
             raise RuntimeError("Cannot change manual brightness during calibration")
-        brightness = max(0, min(100, int(brightness)))
+        brightness = max(MIN_MANUAL_BRIGHTNESS, min(100, int(brightness)))
         if brightness == self._manual_brightness:
             return
         self._manual_brightness = brightness
