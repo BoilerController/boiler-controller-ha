@@ -23,8 +23,9 @@ from .const import (
     DIMMER_MODES,
 )
 from .shelly_client import ShellyClient
-from .calculator import Calculator
+from .calculator import Calculator, DEFAULT_CALIBRATION_PROFILE
 from .calibration import CalibrationStore, points_to_thresholds
+from .profile_image import ProfileImageManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,10 +45,14 @@ class BoilerController:
         self._last_calculator_run = None
         self._shelly_status = None
         self._current_dimmer_percentage: int | None = None
+        self._active_plot_points: list[tuple[int, float]] = list(DEFAULT_CALIBRATION_PROFILE)
         self._dispatcher_signal = f"{DOMAIN}_{config_entry.entry_id}_shelly_status"
         self._mode_signal = f"{DOMAIN}_{config_entry.entry_id}_dimming_mode"
         self._manual_brightness_signal = f"{DOMAIN}_{config_entry.entry_id}_manual_brightness"
         self._calibration_signal = f"{DOMAIN}_{config_entry.entry_id}_calibration_state"
+        self._profile_image_signal = f"{DOMAIN}_{config_entry.entry_id}_profile_image"
+        self._profile_image_manager = ProfileImageManager(hass, config_entry.entry_id)
+        self._profile_image_updated_at = None
         
         # Configuration
         self.shelly_url = config_entry.data[CONF_SHELLY_URL]
@@ -406,6 +411,17 @@ class BoilerController:
         """Return the active calibration profile, if any."""
         return self._calibration_profile
 
+    @property
+    def profile_image_manager(self) -> ProfileImageManager:
+        """Return the renderer that maintains the calibration curve image."""
+
+        return self._profile_image_manager
+
+    def get_active_plot_points(self) -> list[tuple[int, float]]:
+        """Return the latest calibration profile expressed as percentage/watt pairs."""
+
+        return list(self._active_plot_points)
+
     def get_shelly_status_signal(self):
         """Return dispatcher signal name for Shelly status updates."""
         return self._dispatcher_signal
@@ -421,6 +437,16 @@ class BoilerController:
     def get_calibration_state_signal(self):
         """Dispatcher signal fired when calibration state changes."""
         return self._calibration_signal
+
+    def get_profile_image_signal(self):
+        """Dispatcher signal fired when the rendered profile image changes."""
+
+        return self._profile_image_signal
+
+    def get_profile_image_updated_at(self):
+        """Return timestamp of the last profile image refresh."""
+
+        return self._profile_image_updated_at
 
     @property
     def dimming_mode(self) -> str:
@@ -548,7 +574,7 @@ class BoilerController:
                     return None
 
                 profile = await self._calibration_store.async_save_points(measurements)
-                self._apply_calibration_profile(profile)
+                await self._apply_calibration_profile(profile)
                 detail_lines = [
                     f"  - {point['percentage']}% -> {point['watts']:.2f} W"
                     for point in measurements
@@ -798,20 +824,34 @@ class BoilerController:
             _LOGGER.warning("Failed to load calibration profile: %s", err)
             profile = None
 
-        self._apply_calibration_profile(profile)
+        await self._apply_calibration_profile(profile)
         if profile:
             _LOGGER.info(
                 "Loaded calibration profile with %s points",
                 len(profile.get("points", [])),
             )
 
-    def _apply_calibration_profile(self, profile: dict | None) -> None:
+    async def _apply_calibration_profile(self, profile: dict | None) -> None:
         """Install the provided calibration profile or fall back to defaults."""
 
         self._calibration_profile = profile
         points = profile.get("points", []) if profile else []
         thresholds = points_to_thresholds(points)
+        plot_points = self._build_plot_points(thresholds)
         self._calculator.set_calibration_profile(thresholds if thresholds else None)
+        self._active_plot_points = plot_points
+        await self._profile_image_manager.async_update(plot_points)
+        self._profile_image_updated_at = dt_util.utcnow()
+        async_dispatcher_send(self.hass, self._profile_image_signal)
+
+    def _build_plot_points(self, thresholds: list[tuple[float, int]] | None) -> list[tuple[int, float]]:
+        if not thresholds:
+            return list(DEFAULT_CALIBRATION_PROFILE)
+        plot_points: list[tuple[int, float]] = []
+        for watts, percentage in thresholds:
+            plot_points.append((int(percentage), float(watts)))
+        plot_points.sort(key=lambda item: item[0])
+        return plot_points
 
     @staticmethod
     def _get_state_unit(state) -> str:

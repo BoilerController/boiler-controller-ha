@@ -1,7 +1,7 @@
 DOMAIN = "boiler_controller"
 VERSION = "0.1.0"
 
-PLATFORMS = ["sensor", "select", "number", "button"]
+PLATFORMS = ["sensor", "select", "number", "button", "image"]
 
 # Configuration flow step IDs
 STEP_POWER_SENSOR = "power_sensor"
