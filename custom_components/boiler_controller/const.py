@@ -1,5 +1,5 @@
 DOMAIN = "boiler_controller"
-VERSION = "0.1.0"
+VERSION = "1.0.0"
 
 PLATFORMS = ["sensor", "select", "number", "button"]
 

@@ -270,7 +270,11 @@ class BoilerControllerConfigFlow(ShellyValidationMixin, config_entries.ConfigFlo
         return self.async_show_form(
             step_id="shelly_config", 
             data_schema=schema, 
-            errors=errors
+            errors=errors,
+            description_placeholders={
+                "example_url1": "http://shelly0110dimg3-xxxx.local",
+                "example_url2": "http://shellyplusdimg3-xxxx.local"
+            }
         )
 
     async def _get_power_sensors(self):
@@ -420,6 +424,10 @@ class BoilerControllerOptionsFlow(ShellyValidationMixin, config_entries.OptionsF
             step_id="shelly_config",
             data_schema=schema,
             errors=errors,
+            description_placeholders={
+                "example_url1": "http://shelly0110dimg3-xxxx.local",
+                "example_url2": "http://shellyplusdimg3-xxxx.local"
+            }
         )
 
     async def _get_power_sensors(self):
