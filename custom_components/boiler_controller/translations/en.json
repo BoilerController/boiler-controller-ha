@@ -17,7 +17,11 @@
       },
       "shelly_config": {
         "title": "Configure Shelly Device",
-        "description": "Enter the Shelly URL or IP address. If you started this flow from a discovered device we will pre-fill the field for you (e.g. http://shelly0110dimg3-xxxx.local or http://shellyplusdimg3-xxxx.local).",
+        "description": "Enter the Shelly URL or IP address. If you started this flow from a discovered device we will pre-fill the field for you (e.g. {example_url1} or {example_url2}).",
+        "description_placeholders": {
+          "example_url1": "http://shelly0110dimg3-xxxx.local",
+          "example_url2": "http://shellyplusdimg3-xxxx.local"
+        },
         "data": {
           "shelly_url": "Shelly Base URL"
         }
