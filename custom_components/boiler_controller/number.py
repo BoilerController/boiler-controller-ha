@@ -84,10 +84,12 @@ class BoilerControllerManualBrightnessNumber(NumberEntity):
 
     @property
     def device_info(self):
+        from .const import VERSION as DEFAULT_VERSION
+        version = self.controller.integration_version if self.controller.integration_version else DEFAULT_VERSION
         return {
             "identifiers": {(DOMAIN, self.config_entry.entry_id)},
             "name": self.config_entry.title,
             "manufacturer": "Boiler Controller",
             "model": "P1 to Shelly Controller",
-            "sw_version": self.controller.integration_version or str(self.config_entry.version),
+            "sw_version": str(version),
         }

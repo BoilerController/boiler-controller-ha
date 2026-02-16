@@ -38,13 +38,15 @@ except ImportError:
     UNIT_TEMP = "°C"
     UNIT_ENERGY = "kWh"
 
-from .const import DOMAIN
+from .const import DOMAIN, VERSION
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def _integration_version(controller, config_entry: ConfigEntry) -> str:
-    return controller.integration_version or str(config_entry.version)
+    from .const import VERSION as DEFAULT_VERSION
+    version = controller.integration_version if controller.integration_version else DEFAULT_VERSION
+    return str(version)
 
 
 def _device_info(config_entry: ConfigEntry, controller) -> Dict[str, Any]:

@@ -17,11 +17,7 @@
       },
       "shelly_config": {
         "title": "Shelly Configureren",
-        "description": "Vul de Shelly RPC basis URL in. Startte je deze flow vanuit een gevonden apparaat? Dan vullen we dit veld alvast voor je in (bijv. {example_url1} of {example_url2}).",
-        "description_placeholders": {
-          "example_url1": "http://shelly0110dimg3-xxxx.local",
-          "example_url2": "http://shellyplusdimg3-xxxx.local"
-        },
+        "description": "Vul de Shelly URL of IP adres in. Startte je deze flow vanuit een gevonden apparaat? Dan vullen we dit veld alvast voor je in (bijv. {example_url1} of {example_url2}).",
         "data": {
           "shelly_url": "Shelly Basis URL"
         }
