@@ -71,3 +71,49 @@ The controller always works from the calibration profile (either your recorded o
 4. **Clamp to allowed range** – enforce the configured min/max dimmer bounds and send that final percentage to the Shelly.
 
 Because the profile already captures how your dimmer responds at each step, this approach automatically compensates for situations where warm hardware performs better than cold hardware.
+
+## Example: Switching from Auto to Manual
+
+You can take manual control of the boiler at any time, for example when you want to heat the boiler during low energy prices or simply need hot water on demand:
+
+**Via the UI:**
+1. Go to your Boiler Controller device page in Home Assistant
+2. Find the **Dimmer Mode** select entity
+3. Change it from `auto` to `manual`
+4. Then adjust the **Manual Brightness** number entity to your desired percentage (e.g., 80%)
+5. The boiler will immediately switch to that brightness level, regardless of what the P1 meter reports
+
+**Via an Automation:**
+```yaml
+alias: "Set boiler to 80% during off-peak hours"
+trigger:
+  - platform: time
+    at: "23:00:00"
+action:
+  - service: select.select_option
+    target:
+      entity_id: select.boiler_controller_dimmer_mode
+    data:
+      option: manual
+  - service: number.set_value
+    target:
+      entity_id: number.boiler_controller_manual_brightness
+    data:
+      value: 80
+```
+
+**Returning to automatic mode:**
+```yaml
+alias: "Return boiler to auto after off-peak hours"
+trigger:
+  - platform: time
+    at: "07:00:00"
+action:
+  - service: select.select_option
+    target:
+      entity_id: select.boiler_controller_dimmer_mode
+    data:
+      option: auto
+```
+
+Note: replace `boiler_controller` in the entity IDs with the name of your config entry if you chose a different name during setup.
