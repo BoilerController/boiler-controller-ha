@@ -452,6 +452,8 @@ class BoilerController:
 
     async def async_set_dimming_mode(self, mode: str):
         """Set dimming mode to auto or manual."""
+        if self._calibration_active:
+            raise RuntimeError("Cannot change dimming mode during calibration")
         if mode not in (DIMMER_MODE_AUTO, DIMMER_MODE_MANUAL):
             raise ValueError(f"Unsupported dimming mode: {mode}")
         if mode == self._dimming_mode:
