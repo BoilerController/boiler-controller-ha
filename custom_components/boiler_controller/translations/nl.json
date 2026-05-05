@@ -3,37 +3,33 @@
     "step": {
       "user": {
         "title": "Boiler Controller Instellen",
-        "description": "Selecteer je vermogenssensor en vul de Shelly apparaatdetails in.",
+        "description": "Geef deze integratie een naam.",
         "data": {
           "name": "Integratie Naam"
         }
       },
       "power_sensor": {
-        "title": "Selecteer Vermogen Sensor",
-        "description": "Kies de sensor die huidige vermogen verbruik/productie gegevens levert (in Watts)",
+        "title": "Selecteer Vermogenssensor",
+        "description": "Kies de sensor die het actuele netto netvermogen levert (in Watt). Negatief = surplus/teruglevering, positief = afname.",
         "data": {
-          "p1_total_entity": "Vermogen Sensor"
+          "power_sensor": "Vermogenssensor"
         }
       },
-      "shelly_config": {
-        "title": "Shelly Configureren",
-        "description": "Vul de Shelly URL of IP adres in. Startte je deze flow vanuit een gevonden apparaat? Dan vullen we dit veld alvast voor je in (bijv. {example_url1} of {example_url2}).",
+      "boiler_config": {
+        "title": "Boiler Controller Module Configureren",
+        "description": "Vul het IP-adres of de mDNS-hostnaam in van de boiler controller module (bijv. {example_host}).",
         "data": {
-          "shelly_url": "Shelly Basis URL"
+          "boiler_host": "Module Host / IP"
         }
       }
     },
     "error": {
-      "no_power_sensors": "Geen vermogen sensoren gevonden in Home Assistant",
-      "entity_not_found": "De geselecteerde entiteit werd niet gevonden",
-      "no_dimmer_entities": "Geen licht of input_number entiteiten gevonden in Home Assistant",
-      "invalid_url": "Geef een geldige http(s) URL op",
-      "cannot_connect": "Kan geen verbinding maken met het Shelly apparaat",
-      "cannot_identify": "Kan het Shelly apparaat ID niet uitlezen",
-      "device_in_use": "Deze Shelly is al geconfigureerd"
+      "no_power_sensors": "Geen vermogenssensoren gevonden in Home Assistant",
+      "invalid_host": "Host mag niet leeg zijn",
+      "cannot_connect": "Kan geen verbinding maken met de boiler controller module"
     },
     "abort": {
-      "already_configured": "Boiler Controller is al geconfigureerd",
+      "already_configured": "Deze boiler controller module is al geconfigureerd",
       "unsupported_device": "Het gevonden apparaat wordt niet ondersteund"
     }
   },
@@ -41,23 +37,10 @@
     "step": {
       "init": {
         "title": "Boiler Controller Opties",
-        "description": "Wijzig de vermogenssensor of Shelly die deze controller gebruikt",
+        "description": "Pas de module host of vermogenssensor aan.",
         "data": {
-          "change_devices": "Wijzig vermogenssensor of Shelly instellingen"
-        }
-      },
-      "power_sensor": {
-        "title": "Selecteer Nieuwe Stroommeter",
-        "description": "Kies een nieuwe sensor die huidige stroomverbruik/productie data levert (in Watts)",
-        "data": {
-          "p1_total_entity": "Stroommeter"
-        }
-      },
-      "shelly_config": {
-        "title": "Shelly Instellingen Bijwerken",
-        "description": "Pas de Shelly URL aan. Als het apparaat eerder gevonden werd, tonen we hier de huidige waarde.",
-        "data": {
-          "shelly_url": "Shelly Basis URL"
+          "power_sensor": "Vermogenssensor",
+          "boiler_host": "Module Host / IP"
         }
       }
     }
